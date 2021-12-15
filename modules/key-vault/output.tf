@@ -27,3 +27,9 @@ output "random_secret_names" {
   description = "List of names for random passwords / secrets to create, for demo purposes."
   value       = keys(random_password.random)
 }
+
+output "random_secrets" {
+  description = "Map of names=>values for random passwords / secrets to create, for demo purposes."
+  value       = { for key, value in random_password.random: key => value.result }
+  sensitive   = true
+}
