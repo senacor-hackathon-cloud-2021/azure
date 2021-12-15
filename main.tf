@@ -57,7 +57,7 @@ module "vault" {
 
 /*
 module "app_service_public" {
-  source = "./modules/app-service"
+  source = "./modules/containers/app-service"
 
   azurerm_location = var.azurerm_location
 
@@ -94,7 +94,7 @@ module "app_service_public" {
 
 
 module "container_instance_public" {
-  source = "./modules/container-instance"
+  source = "./modules/containers/container-instance"
 
   azurerm_location = var.azurerm_location
 
