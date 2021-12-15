@@ -30,6 +30,6 @@ output "random_secret_names" {
 
 output "random_secrets" {
   description = "Map of names=>values for random passwords / secrets to create, for demo purposes."
-  value       = { for key, value in random_password.random: key => value.result }
+  value       = { for key, value in random_password.random : key => value.result }
   sensitive   = true
 }

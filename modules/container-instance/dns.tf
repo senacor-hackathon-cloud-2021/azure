@@ -7,7 +7,7 @@ resource "azurerm_dns_cname_record" "this" {
   zone_name           = var.dns_zone_name
   resource_group_name = var.dns_zone_resource_group_name
 
-  ttl     = local.dns_ttl
+  ttl    = local.dns_ttl
   record = azurerm_container_group.this.fqdn
 
   tags = local.common_tags

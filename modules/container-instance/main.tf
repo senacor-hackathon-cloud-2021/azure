@@ -3,7 +3,7 @@ terraform {
     azurerm = {
       version = "~>2.80"
     }
-   docker = {
+    docker = {
       source  = "kreuzwerker/docker"
       version = "~>2.15"
     }
@@ -19,7 +19,7 @@ locals {
   docker_secret_env_vars = {
     for key, value in var.secret_docker_env_vars :
     key => value
-#    key => "@Microsoft.KeyVault(VaultName=${var.secret_docker_env_vars_vault_name};SecretName=${value})"
+    #    key => "@Microsoft.KeyVault(VaultName=${var.secret_docker_env_vars_vault_name};SecretName=${value})"
   }
 
   docker_env_vars = merge(
@@ -37,24 +37,24 @@ resource "azurerm_resource_group" "this" {
 }
 
 resource "random_string" "name_suffix" {
-  special=false
-  length = 5
+  special = false
+  length  = 5
 
   keepers = {
-    full_name = local.full_name
+    full_name       = local.full_name
     ip_address_type = var.ip_address_type
     dns_name_label  = var.dns_name
 
-    image = var.docker_image
-    cpu = var.cpu_cores
+    image  = var.docker_image
+    cpu    = var.cpu_cores
     memory = var.mem_gb
 
-    environment_variables        = join(",",values(local.docker_env_vars))
-    secure_environment_variables = join(",",values(local.docker_secret_env_vars))
+    environment_variables        = join(",", values(local.docker_env_vars))
+    secure_environment_variables = join(",", values(local.docker_secret_env_vars))
 
-      port     = var.docker_http_port
-        path   = var.docker_health_check_path
-    identity_ids = join(",",local.managed_identity_ids)
+    port         = var.docker_http_port
+    path         = var.docker_health_check_path
+    identity_ids = join(",", local.managed_identity_ids)
 
     docker_registry_image = data.docker_registry_image.this.sha256_digest
   }
