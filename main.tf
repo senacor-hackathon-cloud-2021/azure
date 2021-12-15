@@ -1,3 +1,7 @@
+locals {
+  random_secret_names = ["demo1"]
+}
+
 module "vnet" {
   source = "./modules/network/vnet"
 
@@ -30,7 +34,7 @@ module "dns" {
 
   azurerm_location = var.azurerm_location
   name_prefix      = var.name_prefix
-  zone_name        = "azure.dobel.click"
+  zone_name        = var.dns_zone_name
 
   tags_prefix = var.tags_prefix
   common_tags = local.common_tags
@@ -45,12 +49,13 @@ module "vault" {
   name_prefix = var.name_prefix
   name        = "vault"
 
-  random_secret_names = ["demo1"]
+  random_secret_names = local.random_secret_names
 
   tags_prefix = var.tags_prefix
   common_tags = local.common_tags
 }
 
+/*
 module "app_service_public" {
   source = "./modules/app-service"
 
@@ -61,15 +66,15 @@ module "app_service_public" {
 
   app_service_plan_tier      = "Standard"
   app_service_plan_size      = "S1"
-  app_service_plan_max_scale = 5
+  app_service_plan_max_scale = 1
 
   dns_name                     = "public-appservice"
   dns_zone_name                = module.dns.zone_name
   dns_zone_resource_group_name = module.dns.zone_resource_group_name
 
-  docker_image             = "ghcr.io/easimon/simple-rest-service:latest"
-  docker_http_port         = 8080
-  docker_health_check_path = "/health"
+  docker_image             = var.docker_image
+  docker_http_port         = var.docker_http_port
+  docker_health_check_path = var.docker_health_check_path
 
   docker_env_vars = {
     APP_ENVIRONMENT_ENDPOINT_ENABLED : true
@@ -79,7 +84,43 @@ module "app_service_public" {
   vault_reader_identity_id          = module.vault.reader_identity_id
   secret_docker_env_vars_vault_name = module.vault.key_vault_name
   secret_docker_env_vars = {
-    DEMO_SECRET = "demo1"
+    DEMO_SECRET = local.random_secret_names[0]
+  }
+
+  tags_prefix = var.tags_prefix
+  common_tags = local.common_tags
+}
+*/
+
+
+module "container_instance_public" {
+  source = "./modules/container-instance"
+
+  azurerm_location = var.azurerm_location
+
+  name_prefix = var.name_prefix
+  name        = "public-container"
+
+  cpu_cores = 1
+  mem_gb    = 0.3
+
+  dns_name                     = "public-container-instance"
+  dns_zone_name                = module.dns.zone_name
+  dns_zone_resource_group_name = module.dns.zone_resource_group_name
+
+  docker_image             = var.docker_image
+  docker_http_port         = var.docker_http_port
+  docker_health_check_path = var.docker_health_check_path
+
+  docker_env_vars = {
+    APP_ENVIRONMENT_ENDPOINT_ENABLED : true
+    #APP_ENVIRONMENT_ENDPOINT_FILTERED_PREFIXES : "APPSETTING_,WEBSITE_,IDENTITY_,MSI_"
+  }
+
+  vault_reader_identity_id          = module.vault.reader_identity_id
+  secret_docker_env_vars_vault_name = module.vault.key_vault_name
+  secret_docker_env_vars = {
+    DEMO_SECRET = module.vault.random_secrets[local.random_secret_names[0]]
   }
 
   tags_prefix = var.tags_prefix
