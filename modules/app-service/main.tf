@@ -39,7 +39,7 @@ resource "azurerm_app_service_plan" "this" {
   resource_group_name = azurerm_resource_group.this.name
   kind                = "Linux"
   reserved            = true
-  per_site_scaling    = true
+  per_site_scaling    = false
 
   sku {
     tier = var.app_service_plan_tier
@@ -69,13 +69,26 @@ resource "azurerm_app_service" "this" {
     health_check_path = var.docker_health_check_path
 
     vnet_route_all_enabled = true
-    #    always_on              = true
-    http2_enabled   = true
-    min_tls_version = 1.2
+    http2_enabled          = true
+    min_tls_version        = 1.2
 
     scm_type = "None"
 
     ip_restriction = []
+  }
+
+  logs {
+    application_logs {
+      file_system_level = "Information"
+    }
+    http_logs {
+      file_system {
+        retention_in_days = 7
+        retention_in_mb   = 50
+      }
+
+    }
+    detailed_error_messages_enabled = true
   }
 
   app_settings = local.docker_env_vars
