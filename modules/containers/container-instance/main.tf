@@ -13,7 +13,8 @@ terraform {
 locals {
   full_name = "${var.name_prefix}-${var.name}"
   docker_static_env_vars = {
-    COMMON_PREFIX = var.name_prefix
+    COMMON_PREFIX       = var.name_prefix
+    APP_DEPLOYMENT_TYPE = "container-instance"
   }
 
   docker_secret_env_vars = {
@@ -26,6 +27,8 @@ locals {
     var.docker_env_vars,
     local.docker_static_env_vars,
   )
+
+  docker_image_sha_ref = "${replace(var.docker_image, "/:.*$/", "")}@${data.docker_registry_image.this.sha256_digest}"
 }
 
 
@@ -36,42 +39,18 @@ resource "azurerm_resource_group" "this" {
   tags = local.common_tags
 }
 
-resource "random_string" "name_suffix" {
-  special = false
-  length  = 5
-
-  keepers = {
-    full_name       = local.full_name
-    ip_address_type = var.ip_address_type
-    dns_name_label  = var.dns_name
-
-    image  = var.docker_image
-    cpu    = var.cpu_cores
-    memory = var.mem_gb
-
-    environment_variables        = join(",", values(local.docker_env_vars))
-    secure_environment_variables = join(",", values(local.docker_secret_env_vars))
-
-    port         = var.docker_http_port
-    path         = var.docker_health_check_path
-    identity_ids = join(",", local.managed_identity_ids)
-
-    docker_registry_image = data.docker_registry_image.this.sha256_digest
-  }
-}
-
 resource "azurerm_container_group" "this" {
-  name                = "${local.full_name}-${random_string.name_suffix.result}"
+  name                = local.full_name
   location            = azurerm_resource_group.this.location
   resource_group_name = azurerm_resource_group.this.name
 
   ip_address_type = var.ip_address_type
-  dns_name_label  = "${local.full_name}-${random_string.name_suffix.result}"
+  dns_name_label  = local.full_name
   os_type         = "Linux"
 
   container {
     name   = "main"
-    image  = var.docker_image
+    image  = local.docker_image_sha_ref
     cpu    = var.cpu_cores
     memory = var.mem_gb
 
@@ -84,6 +63,11 @@ resource "azurerm_container_group" "this" {
     }
 
     readiness_probe {
+      initial_delay_seconds = 20
+      failure_threshold     = 5
+      period_seconds        = 10
+      success_threshold     = 1
+      timeout_seconds       = 1
       http_get {
         path   = var.docker_health_check_path
         port   = var.docker_http_port
@@ -92,6 +76,11 @@ resource "azurerm_container_group" "this" {
     }
 
     liveness_probe {
+      initial_delay_seconds = 20
+      failure_threshold     = 5
+      period_seconds        = 10
+      success_threshold     = 1
+      timeout_seconds       = 1
       http_get {
         path   = var.docker_health_check_path
         port   = var.docker_http_port
@@ -111,9 +100,8 @@ resource "azurerm_container_group" "this" {
   }
 
   lifecycle {
-    create_before_destroy = true
     ignore_changes = [
-      identity # avoid
+      identity # avoid recreation because of ordering problems in identity list
     ]
   }
 

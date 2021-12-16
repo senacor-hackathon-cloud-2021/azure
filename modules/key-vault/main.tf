@@ -47,11 +47,22 @@ resource "azurerm_user_assigned_identity" "reader" {
 }
 
 resource "azurerm_key_vault_access_policy" "reader" {
-  for_each = toset(concat(var.secret_reader_object_ids, [azurerm_user_assigned_identity.reader.principal_id]))
+  for_each = toset(var.secret_reader_object_ids)
 
   key_vault_id = azurerm_key_vault.this.id
   tenant_id    = var.azurerm_tenant_id
   object_id    = each.key
+
+  secret_permissions = [
+    "List",
+    "Get",
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "msi_reader" {
+  key_vault_id = azurerm_key_vault.this.id
+  tenant_id    = var.azurerm_tenant_id
+  object_id    = azurerm_user_assigned_identity.reader.principal_id
 
   secret_permissions = [
     "List",

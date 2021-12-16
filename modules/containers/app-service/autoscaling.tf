@@ -5,7 +5,7 @@ locals {
 
   time_grain  = "PT1M"
   time_window = "PT3M"
-  cooldown    = local.time_grain
+  cooldown    = local.time_window
 }
 
 resource "azurerm_monitor_autoscale_setting" "this" {
@@ -63,4 +63,6 @@ resource "azurerm_monitor_autoscale_setting" "this" {
       }
     }
   }
+
+  tags = local.common_tags
 }

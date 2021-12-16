@@ -1,0 +1,125 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "name": {
+      "type": "String"
+    },
+    "location": {
+      "type": "String"
+    },
+    "containers": {
+      "type": "Array"
+    },
+    "secrets": {
+      "type": "Array"
+    },
+    "registries": {
+      "type": "Array",
+      "defaultValue": []
+    },
+    "ingress": {
+      "type": "Object"
+    },
+    "environmentName": {
+      "type": "String"
+    },
+    "workspaceName": {
+      "type": "String"
+    },
+    "workspaceLocation": {
+      "type": "String"
+    },
+    "commonTags": {
+      "type": "Object",
+      "defaultValue": {}
+    },
+    "minReplicas": {
+      "type": "Int",
+      "defaultValue": "0"
+    },
+    "maxReplicas": {
+      "type": "Int",
+      "defaultValue": "1"
+    },
+    "scalingRules": {
+      "type": "Array",
+      "defaultValue": []
+    }
+  },
+  "resources": [
+    {
+      "apiVersion": "2021-03-01",
+      "name": "[parameters('name')]",
+      "type": "Microsoft.Web/containerapps",
+      "kind": "containerapps",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('commonTags')]",
+      "dependsOn": [
+        "[concat('Microsoft.Web/kubeenvironments/', parameters('environmentName'))]"
+      ],
+      "properties": {
+        "kubeEnvironmentId": "[resourceId('Microsoft.Web/kubeenvironments/', parameters('environmentName'))]",
+        "configuration": {
+          "secrets": "[parameters('secrets')]",
+          "registries": "[parameters('registries')]",
+          "ingress": "[parameters('ingress')]"
+        },
+        "template": {
+          "containers": "[parameters('containers')]",
+          "scale": {
+            "minReplicas": "[parameters('minReplicas')]",
+            "maxReplicas": "[parameters('maxReplicas')]",
+            "rules": "[parameters('scalingRules')]"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "2021-03-01",
+      "name": "[parameters('environmentName')]",
+      "type": "Microsoft.Web/kubeEnvironments",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('commonTags')]",
+      "dependsOn": [
+        "[concat('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
+      ],
+      "properties": {
+        "type": "managed",
+        "internalLoadBalancerEnabled": false,
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(concat('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName')), '2020-08-01').customerId]",
+            "sharedKey": "[listKeys(concat('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName')), '2020-08-01').primarySharedKey]"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "2020-08-01",
+      "name": "[parameters('workspaceName')]",
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "location": "[parameters('workspaceLocation')]",
+      "tags": "[parameters('commonTags')]",
+      "dependsOn": [],
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30,
+        "workspaceCapping": {}
+      }
+    }
+  ],
+  "outputs": {
+    "fqdn": {
+      "type": "String",
+      "value": "[reference(concat('Microsoft.Web/containerApps/', parameters('name')), '2021-03-01').configuration.ingress.fqdn]"
+    },
+    "serviceUrl": {
+      "type": "String",
+      "value": "[concat('https://', reference(concat('Microsoft.Web/containerApps/', parameters('name')), '2021-03-01').configuration.ingress.fqdn, '/')]"
+    }
+  }
+}
